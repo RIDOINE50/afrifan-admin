@@ -114,6 +114,7 @@ export default function CreatorsClient({ applications }: { applications: Applica
                   ) : <p className="text-gray-500 text-sm bg-white/5 p-4 rounded-lg text-center">Aucun document</p>}
                 </div>
 
+
                 <div>
                   <p className="text-gray-500 text-xs uppercase mb-2">Selfie avec pièce</p>
                   {selectedApp.selfie_url ? (
