@@ -32,8 +32,9 @@ export async function updateCreatorApplication(
     revalidatePath("/admin/creators")
     
     return { success: true, message: action === "approve" ? "Créateur validé !" : "Demande refusée." }
-  } catch (error: any) {
-    console.error("Erreur:", error)
-    return { success: false, message: error.message || "Une erreur est survenue." }
+  } catch (error: unknown) { // ✅ CORRECTION ICI : 'unknown' au lieu de 'any'
+    const errorMessage = error instanceof Error ? error.message : "Une erreur inconnue est survenue"
+    console.error("Erreur:", errorMessage)
+    return { success: false, message: errorMessage }
   }
 }

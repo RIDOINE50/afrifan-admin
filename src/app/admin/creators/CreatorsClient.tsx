@@ -106,7 +106,7 @@ export default function CreatorsClient({ applications }: { applications: Applica
                 </h3>
                 
                 <div>
-                  <p className="text-gray-500 text-xs uppercase mb-2">Pièce d'identité</p>
+                  <p className="text-gray-500 text-xs uppercase mb-2">Pièce d identité</p>
                   {selectedApp.id_card_url ? (
                     <a href={selectedApp.id_card_url} target="_blank" rel="noopener noreferrer">
                       <img src={selectedApp.id_card_url} alt="CNI" className="w-full h-48 object-cover rounded-lg border border-white/10 hover:opacity-90 transition" />
