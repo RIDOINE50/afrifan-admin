@@ -156,7 +156,10 @@ export default function AdminWithdrawalsPage() {
 
           alert('❌ Erreur lors du transfert. Veuillez réessayer.');
         }
-      } else {
+            } else {
+        console.log('🔄 DÉBUT DU REFUS DU RETRAIT...');
+        
+        // 1. Récupérer les infos du retrait
         const { data: withdrawal, error: fetchError } = await supabase
           .from('withdrawals')
           .select('creator_id, amount')
@@ -164,22 +167,45 @@ export default function AdminWithdrawalsPage() {
           .single();
 
         if (fetchError || !withdrawal) {
+          console.error('❌ Impossible de récupérer le retrait:', fetchError);
           throw new Error('Impossible de récupérer les données du retrait');
         }
 
-        const { data: wallet } = await supabase
+        console.log('✅ Retrait récupéré:', withdrawal);
+        console.log('   Creator ID:', withdrawal.creator_id);
+        console.log('   Amount:', withdrawal.amount);
+
+        // 2. Récupérer le portefeuille actuel
+        const { data: wallet, error: walletError } = await supabase
           .from('wallets')
           .select('balance')
           .eq('creator_id', withdrawal.creator_id)
           .single();
 
-        const newBalance = (wallet?.balance || 0) + withdrawal.amount;
+        if (walletError) {
+          console.error('❌ Erreur récupération wallet:', walletError);
+          throw new Error('Impossible de récupérer le portefeuille');
+        }
 
-        await supabase
+        console.log('✅ Wallet actuel:', wallet);
+        const currentBalance = wallet?.balance || 0;
+        const newBalance = currentBalance + withdrawal.amount;
+        console.log('💰 Nouveau solde calculé:', newBalance, '(actuel:', currentBalance, '+', withdrawal.amount, ')');
+
+        // 3. Mettre à jour le portefeuille
+        const { error: updateWalletError } = await supabase
           .from('wallets')
           .update({ balance: newBalance })
           .eq('creator_id', withdrawal.creator_id);
 
+        if (updateWalletError) {
+          console.error('❌ ÉCHEC MISE À JOUR WALLET:', updateWalletError);
+          throw new Error('Impossible de mettre à jour le portefeuille');
+        }
+
+        console.log('✅ WALLET MIS À JOUR AVEC SUCCÈS !');
+
+        // 4. Mettre à jour le statut du retrait
         await supabase
           .from('withdrawals')
           .update({
@@ -189,8 +215,8 @@ export default function AdminWithdrawalsPage() {
           })
           .eq('id', selectedWithdrawal.id);
 
-        // ✅ NOUVEAU : Envoyer la notification de refus au créateur
-        await supabase.from('notifications').insert({
+        // 5. Envoyer la notification
+        const { error: notifError } = await supabase.from('notifications').insert({
           user_id: selectedWithdrawal.creator_id,
           type: 'withdrawal_rejected',
           title: 'Retrait refusé 🚫',
@@ -198,6 +224,12 @@ export default function AdminWithdrawalsPage() {
           data: { withdrawal_id: selectedWithdrawal.id, amount: selectedWithdrawal.amount, reason: reason || 'Non spécifié' },
           is_read: false
         });
+
+        if (notifError) {
+          console.error('❌ ÉCHEC NOTIFICATION:', notifError);
+        } else {
+          console.log('✅ Notification de refus envoyée !');
+        }
 
         alert(`❌ Retrait refusé. ${withdrawal.amount} FCFA remis au créateur.`);
       }
