@@ -155,7 +155,7 @@ export default function AdminWithdrawalsPage() {
 
           alert('❌ Erreur lors du transfert. Veuillez réessayer.');
         }
-      } else {
+            } else {
         console.log('🔄 DÉBUT DU REFUS DU RETRAIT...');
         
         // 1. Récupérer les infos du retrait
@@ -170,19 +170,20 @@ export default function AdminWithdrawalsPage() {
           throw new Error('Données du retrait introuvables');
         }
 
-        // 2. ✅ UTILISER supabaseAdmin (maintenant correctement importé) pour contourner les RLS
-        const { data: wallet } = await supabaseAdmin
+        // 2. ✅ UTILISER .limit(1) AU LIEU DE .maybeSingle() POUR ÉVITER TOUTE ERREUR 406
+        const { data: walletRows } = await supabaseAdmin
           .from('wallets')
           .select('balance')
           .eq('creator_id', withdrawal.creator_id)
-          .maybeSingle(); 
+          .limit(1); // ← Renvoie toujours un tableau, jamais d'erreur PGRST116
 
+        const wallet = walletRows && walletRows.length > 0 ? walletRows[0] : null;
         const currentBalance = wallet?.balance || 0;
         const newBalance = currentBalance + withdrawal.amount;
         
         console.log('💰 Remboursement calculé :', currentBalance, '+', withdrawal.amount, '=', newBalance);
 
-        // 3. ✅ Mettre à jour OU Créer le portefeuille avec supabaseAdmin (Upsert)
+        // 3. ✅ Mettre à jour OU Créer le portefeuille (Upsert)
         const { error: upsertError } = await supabaseAdmin
           .from('wallets')
           .upsert({
@@ -223,7 +224,7 @@ export default function AdminWithdrawalsPage() {
           console.log('✅ Notification de refus envoyée !');
         }
 
-        alert(`❌ Retrait refusé. ${withdrawal.amount} FCFA ont été remis au créateur.`);
+        alert(`✅ Retrait refusé. ${withdrawal.amount} FCFA ont été remis au créateur.`);
       }
 
       await loadPendingWithdrawals();
