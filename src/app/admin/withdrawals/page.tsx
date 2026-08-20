@@ -52,12 +52,9 @@ export default function AdminWithdrawalsPage() {
         return;
       }
 
-      console.log('✅ Données brutes reçues:', data);
-
       const formattedData: Withdrawal[] = (data || []).map((item) => {
         try {
           let profileData = { username: 'inconnu', full_name: 'Inconnu' };
-          
           if (item.profiles) {
             if (Array.isArray(item.profiles) && item.profiles.length > 0) {
               profileData = item.profiles[0];
@@ -80,12 +77,11 @@ export default function AdminWithdrawalsPage() {
             },
           };
         } catch (mapError) {
-          console.error('❌ Erreur lors du formatage d\'un item:', mapError, item);
+          console.error('❌ Erreur lors du formatage:', mapError, item);
           return null;
         }
       }).filter((item): item is Withdrawal => item !== null);
 
-      console.log('✅ Données formatées:', formattedData);
       setWithdrawals(formattedData);
     } catch (error) {
       console.error('❌ Erreur chargement retraits:', error);
@@ -127,6 +123,16 @@ export default function AdminWithdrawalsPage() {
             })
             .eq('id', selectedWithdrawal.id);
 
+          // ✅ NOUVEAU : Envoyer la notification de succès au créateur
+          await supabase.from('notifications').insert({
+            user_id: selectedWithdrawal.creator_id,
+            type: 'withdrawal_approved',
+            title: 'Retrait validé ✅',
+            message: `Votre retrait de ${selectedWithdrawal.amount.toLocaleString('fr-FR')} FCFA a été envoyé avec succès sur votre compte.`,
+            data: { withdrawal_id: selectedWithdrawal.id, amount: selectedWithdrawal.amount },
+            is_read: false
+          });
+
           alert(`✅ Transfert de ${selectedWithdrawal.amount} FCFA envoyé avec succès !`);
         } else {
           await supabase
@@ -137,6 +143,16 @@ export default function AdminWithdrawalsPage() {
               admin_notes: 'Erreur de transfert simulée',
             })
             .eq('id', selectedWithdrawal.id);
+
+          // ✅ NOUVEAU : Envoyer la notification d'échec au créateur
+          await supabase.from('notifications').insert({
+            user_id: selectedWithdrawal.creator_id,
+            type: 'withdrawal_failed',
+            title: 'Échec du transfert ❌',
+            message: `Une erreur est survenue lors du transfert de votre retrait. Veuillez réessayer ou contacter le support.`,
+            data: { withdrawal_id: selectedWithdrawal.id, amount: selectedWithdrawal.amount },
+            is_read: false
+          });
 
           alert('❌ Erreur lors du transfert. Veuillez réessayer.');
         }
@@ -172,6 +188,16 @@ export default function AdminWithdrawalsPage() {
             admin_notes: reason || 'Retrait refusé par l\'administrateur',
           })
           .eq('id', selectedWithdrawal.id);
+
+        // ✅ NOUVEAU : Envoyer la notification de refus au créateur
+        await supabase.from('notifications').insert({
+          user_id: selectedWithdrawal.creator_id,
+          type: 'withdrawal_rejected',
+          title: 'Retrait refusé 🚫',
+          message: `Votre demande de retrait a été refusée. Motif : ${reason || 'Non spécifié'}. Le montant a été remis sur votre portefeuille.`,
+          data: { withdrawal_id: selectedWithdrawal.id, amount: selectedWithdrawal.amount, reason: reason || 'Non spécifié' },
+          is_read: false
+        });
 
         alert(`❌ Retrait refusé. ${withdrawal.amount} FCFA remis au créateur.`);
       }
@@ -215,7 +241,6 @@ export default function AdminWithdrawalsPage() {
     return labels[method] || method;
   };
 
-  // ✅ AFFICHAGE DE L'ERREUR SI ELLE EXISTE (Couleurs corrigées)
   if (error) {
     return (
       <div className="min-h-screen bg-[#0A0A0A] text-white flex items-center justify-center p-8">
@@ -234,10 +259,7 @@ export default function AdminWithdrawalsPage() {
   }
 
   return (
-    // ✅ FOND NOIR PROFOND (#0A0A0A)
     <div className="min-h-screen bg-[#0A0A0A] text-white">
-      
-      {/* ✅ HEADER NOIR (#1A1A1A) */}
       <div className="bg-[#1A1A1A] border-b border-[#2A2A2A]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex items-center justify-between">
@@ -247,7 +269,6 @@ export default function AdminWithdrawalsPage() {
                 {withdrawals.length} retrait{withdrawals.length > 1 ? 's' : ''} en attente
               </p>
             </div>
-            {/* ✅ BOUTON VIOLET EXACT (#8B5CF6) */}
             <button
               onClick={loadPendingWithdrawals}
               className="px-4 py-2 bg-[#8B5CF6] hover:bg-[#7C3AED] rounded-lg transition-colors font-medium"
@@ -261,7 +282,6 @@ export default function AdminWithdrawalsPage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {isLoading ? (
           <div className="flex items-center justify-center h-64">
-            {/* ✅ SPINNER VIOLET */}
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#8B5CF6]"></div>
           </div>
         ) : withdrawals.length === 0 ? (
