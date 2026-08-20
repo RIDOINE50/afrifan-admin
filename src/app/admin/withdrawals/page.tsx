@@ -156,76 +156,7 @@ export default function AdminWithdrawalsPage() {
 
           alert('❌ Erreur lors du transfert. Veuillez réessayer.');
         }
-                  } else {
-        console.log('🔄 DÉBUT DU REFUS DU RETRAIT...');
-        
-        // 1. Récupérer les infos du retrait
-        const { data: withdrawal, error: fetchError } = await supabase
-          .from('withdrawals')
-          .select('creator_id, amount')
-          .eq('id', selectedWithdrawal.id)
-          .single();
-
-        if (fetchError || !withdrawal) {
-          console.error('❌ Impossible de récupérer le retrait:', fetchError);
-          throw new Error('Données du retrait introuvables');
-        }
-
-        // 2. Récupérer le portefeuille (utilise maybeSingle pour éviter le crash si 0 ligne)
-        const { data: wallet } = await supabase
-          .from('wallets')
-          .select('balance')
-          .eq('creator_id', withdrawal.creator_id)
-          .maybeSingle(); // ✅ NE PLANTE PAS SI 0 LIGNE
-
-        const currentBalance = wallet?.balance || 0;
-        const newBalance = currentBalance + withdrawal.amount;
-        
-        console.log('💰 Remboursement :', currentBalance, '+', withdrawal.amount, '=', newBalance);
-
-        // 3. Mettre à jour OU Créer le portefeuille (Upsert)
-        const { error: upsertError } = await supabase
-          .from('wallets')
-          .upsert({
-            creator_id: withdrawal.creator_id,
-            balance: newBalance
-          });
-
-        if (upsertError) {
-          console.error('❌ ÉCHEC MISE À JOUR/Création WALLET:', upsertError);
-          throw new Error('Impossible de créditer le portefeuille');
-        }
-
-        console.log('✅ PORTEFEUILLE CRÉDITÉ AVEC SUCCÈS !');
-
-        // 4. Mettre à jour le statut du retrait
-        await supabase
-          .from('withdrawals')
-          .update({
-            status: 'rejected',
-            processed_at: new Date().toISOString(),
-            admin_notes: reason || 'Retrait refusé par l\'administrateur',
-          })
-          .eq('id', selectedWithdrawal.id);
-
-        // 5. Envoyer la notification (en s'assurant que les données sont bien formatées)
-        const { error: notifError } = await supabase.from('notifications').insert({
-          user_id: withdrawal.creator_id, // ✅ Utiliser withdrawal.creator_id pour être sûr
-          type: 'withdrawal_rejected',
-          title: 'Retrait refusé 🚫',
-          message: `Votre demande de retrait de ${withdrawal.amount.toLocaleString('fr-FR')} FCFA a été refusée. Motif : ${reason || 'Non spécifié'}. Le montant a été remis sur votre portefeuille.`,
-          data: JSON.stringify({ withdrawal_id: selectedWithdrawal.id, amount: withdrawal.amount, reason: reason || 'Non spécifié' }), // ✅ Stringify pour éviter l'erreur 400
-          is_read: false
-        });
-
-        if (notifError) {
-          console.error('❌ ÉCHEC NOTIFICATION:', notifError);
-        } else {
-          console.log('✅ Notification de refus envoyée !');
-        }
-
-        alert(`❌ Retrait refusé. ${withdrawal.amount} FCFA ont été remis au créateur.`);
-      }
+                  } else {}
 
       await loadPendingWithdrawals();
     } catch (error) {
