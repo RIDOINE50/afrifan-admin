@@ -156,7 +156,7 @@ export default function AdminWithdrawalsPage() {
 
           alert('❌ Erreur lors du transfert. Veuillez réessayer.');
         }
-            } else {
+                  } else {
         console.log('🔄 DÉBUT DU REFUS DU RETRAIT...');
         
         // 1. Récupérer les infos du retrait
@@ -168,42 +168,35 @@ export default function AdminWithdrawalsPage() {
 
         if (fetchError || !withdrawal) {
           console.error('❌ Impossible de récupérer le retrait:', fetchError);
-          throw new Error('Impossible de récupérer les données du retrait');
+          throw new Error('Données du retrait introuvables');
         }
 
-        console.log('✅ Retrait récupéré:', withdrawal);
-        console.log('   Creator ID:', withdrawal.creator_id);
-        console.log('   Amount:', withdrawal.amount);
-
-        // 2. Récupérer le portefeuille actuel
-        const { data: wallet, error: walletError } = await supabase
+        // 2. Récupérer le portefeuille (utilise maybeSingle pour éviter le crash si 0 ligne)
+        const { data: wallet } = await supabase
           .from('wallets')
           .select('balance')
           .eq('creator_id', withdrawal.creator_id)
-          .single();
+          .maybeSingle(); // ✅ NE PLANTE PAS SI 0 LIGNE
 
-        if (walletError) {
-          console.error('❌ Erreur récupération wallet:', walletError);
-          throw new Error('Impossible de récupérer le portefeuille');
-        }
-
-        console.log('✅ Wallet actuel:', wallet);
         const currentBalance = wallet?.balance || 0;
         const newBalance = currentBalance + withdrawal.amount;
-        console.log('💰 Nouveau solde calculé:', newBalance, '(actuel:', currentBalance, '+', withdrawal.amount, ')');
+        
+        console.log('💰 Remboursement :', currentBalance, '+', withdrawal.amount, '=', newBalance);
 
-        // 3. Mettre à jour le portefeuille
-        const { error: updateWalletError } = await supabase
+        // 3. Mettre à jour OU Créer le portefeuille (Upsert)
+        const { error: upsertError } = await supabase
           .from('wallets')
-          .update({ balance: newBalance })
-          .eq('creator_id', withdrawal.creator_id);
+          .upsert({
+            creator_id: withdrawal.creator_id,
+            balance: newBalance
+          });
 
-        if (updateWalletError) {
-          console.error('❌ ÉCHEC MISE À JOUR WALLET:', updateWalletError);
-          throw new Error('Impossible de mettre à jour le portefeuille');
+        if (upsertError) {
+          console.error('❌ ÉCHEC MISE À JOUR/Création WALLET:', upsertError);
+          throw new Error('Impossible de créditer le portefeuille');
         }
 
-        console.log('✅ WALLET MIS À JOUR AVEC SUCCÈS !');
+        console.log('✅ PORTEFEUILLE CRÉDITÉ AVEC SUCCÈS !');
 
         // 4. Mettre à jour le statut du retrait
         await supabase
@@ -215,13 +208,13 @@ export default function AdminWithdrawalsPage() {
           })
           .eq('id', selectedWithdrawal.id);
 
-        // 5. Envoyer la notification
+        // 5. Envoyer la notification (en s'assurant que les données sont bien formatées)
         const { error: notifError } = await supabase.from('notifications').insert({
-          user_id: selectedWithdrawal.creator_id,
+          user_id: withdrawal.creator_id, // ✅ Utiliser withdrawal.creator_id pour être sûr
           type: 'withdrawal_rejected',
           title: 'Retrait refusé 🚫',
-          message: `Votre demande de retrait a été refusée. Motif : ${reason || 'Non spécifié'}. Le montant a été remis sur votre portefeuille.`,
-          data: { withdrawal_id: selectedWithdrawal.id, amount: selectedWithdrawal.amount, reason: reason || 'Non spécifié' },
+          message: `Votre demande de retrait de ${withdrawal.amount.toLocaleString('fr-FR')} FCFA a été refusée. Motif : ${reason || 'Non spécifié'}. Le montant a été remis sur votre portefeuille.`,
+          data: JSON.stringify({ withdrawal_id: selectedWithdrawal.id, amount: withdrawal.amount, reason: reason || 'Non spécifié' }), // ✅ Stringify pour éviter l'erreur 400
           is_read: false
         });
 
@@ -231,7 +224,7 @@ export default function AdminWithdrawalsPage() {
           console.log('✅ Notification de refus envoyée !');
         }
 
-        alert(`❌ Retrait refusé. ${withdrawal.amount} FCFA remis au créateur.`);
+        alert(`❌ Retrait refusé. ${withdrawal.amount} FCFA ont été remis au créateur.`);
       }
 
       await loadPendingWithdrawals();
