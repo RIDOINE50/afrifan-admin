@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabase';
+// ✅ CORRECTION : Ajout de supabaseAdmin ici
+import { supabase, supabaseAdmin } from '@/lib/supabase';
 import WithdrawalCard from '@/components/admin/WithdrawalCard';
 import ConfirmModal from '@/components/admin/ConfirmModal';
 
@@ -123,13 +124,12 @@ export default function AdminWithdrawalsPage() {
             })
             .eq('id', selectedWithdrawal.id);
 
-          // ✅ NOUVEAU : Envoyer la notification de succès au créateur
           await supabase.from('notifications').insert({
             user_id: selectedWithdrawal.creator_id,
             type: 'withdrawal_approved',
             title: 'Retrait validé ✅',
             message: `Votre retrait de ${selectedWithdrawal.amount.toLocaleString('fr-FR')} FCFA a été envoyé avec succès sur votre compte.`,
-            data: { withdrawal_id: selectedWithdrawal.id, amount: selectedWithdrawal.amount },
+            data: JSON.stringify({ withdrawal_id: selectedWithdrawal.id, amount: selectedWithdrawal.amount }),
             is_read: false
           });
 
@@ -144,19 +144,87 @@ export default function AdminWithdrawalsPage() {
             })
             .eq('id', selectedWithdrawal.id);
 
-          // ✅ NOUVEAU : Envoyer la notification d'échec au créateur
           await supabase.from('notifications').insert({
             user_id: selectedWithdrawal.creator_id,
             type: 'withdrawal_failed',
             title: 'Échec du transfert ❌',
             message: `Une erreur est survenue lors du transfert de votre retrait. Veuillez réessayer ou contacter le support.`,
-            data: { withdrawal_id: selectedWithdrawal.id, amount: selectedWithdrawal.amount },
+            data: JSON.stringify({ withdrawal_id: selectedWithdrawal.id, amount: selectedWithdrawal.amount }),
             is_read: false
           });
 
           alert('❌ Erreur lors du transfert. Veuillez réessayer.');
         }
-                  } else {}
+      } else {
+        console.log('🔄 DÉBUT DU REFUS DU RETRAIT...');
+        
+        // 1. Récupérer les infos du retrait
+        const { data: withdrawal, error: fetchError } = await supabase
+          .from('withdrawals')
+          .select('creator_id, amount')
+          .eq('id', selectedWithdrawal.id)
+          .single();
+
+        if (fetchError || !withdrawal) {
+          console.error('❌ Impossible de récupérer le retrait:', fetchError);
+          throw new Error('Données du retrait introuvables');
+        }
+
+        // 2. ✅ UTILISER supabaseAdmin (maintenant correctement importé) pour contourner les RLS
+        const { data: wallet } = await supabaseAdmin
+          .from('wallets')
+          .select('balance')
+          .eq('creator_id', withdrawal.creator_id)
+          .maybeSingle(); 
+
+        const currentBalance = wallet?.balance || 0;
+        const newBalance = currentBalance + withdrawal.amount;
+        
+        console.log('💰 Remboursement calculé :', currentBalance, '+', withdrawal.amount, '=', newBalance);
+
+        // 3. ✅ Mettre à jour OU Créer le portefeuille avec supabaseAdmin (Upsert)
+        const { error: upsertError } = await supabaseAdmin
+          .from('wallets')
+          .upsert({
+            creator_id: withdrawal.creator_id,
+            balance: newBalance
+          });
+
+        if (upsertError) {
+          console.error('❌ ÉCHEC MISE À JOUR/Création WALLET:', upsertError);
+          throw new Error('Impossible de créditer le portefeuille');
+        }
+
+        console.log('✅ PORTEFEUILLE CRÉDITÉ AVEC SUCCÈS !');
+
+        // 4. Mettre à jour le statut du retrait
+        await supabase
+          .from('withdrawals')
+          .update({
+            status: 'rejected',
+            processed_at: new Date().toISOString(),
+            admin_notes: reason || 'Retrait refusé par l\'administrateur',
+          })
+          .eq('id', selectedWithdrawal.id);
+
+        // 5. Envoyer la notification
+        const { error: notifError } = await supabase.from('notifications').insert({
+          user_id: withdrawal.creator_id,
+          type: 'withdrawal_rejected',
+          title: 'Retrait refusé 🚫',
+          message: `Votre demande de retrait de ${withdrawal.amount.toLocaleString('fr-FR')} FCFA a été refusée. Motif : ${reason || 'Non spécifié'}. Le montant a été remis sur votre portefeuille.`,
+          data: JSON.stringify({ withdrawal_id: selectedWithdrawal.id, amount: withdrawal.amount, reason: reason || 'Non spécifié' }),
+          is_read: false
+        });
+
+        if (notifError) {
+          console.error('❌ ÉCHEC NOTIFICATION:', notifError);
+        } else {
+          console.log('✅ Notification de refus envoyée !');
+        }
+
+        alert(`❌ Retrait refusé. ${withdrawal.amount} FCFA ont été remis au créateur.`);
+      }
 
       await loadPendingWithdrawals();
     } catch (error) {
