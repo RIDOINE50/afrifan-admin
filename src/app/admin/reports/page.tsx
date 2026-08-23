@@ -92,9 +92,12 @@ export default async function AdminReportsPage() {
                         </p>
                       </div>
 
-                      {/* Boutons d'action */}
+                      {/* ✅ BOUTONS D'ACTION CORRIGÉS POUR VERCEL (Plus de .bind) */}
                       <div className="flex flex-row md:flex-col gap-2 md:min-w-[160px]">
-                        <form action={dismissReport.bind(null, report.id)}>
+                        <form action={async () => {
+                          'use server';
+                          await dismissReport(report.id);
+                        }}>
                           <button 
                             type="submit"
                             className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-[#2A2A2A] hover:bg-[#333333] text-gray-300 rounded-lg text-sm font-medium transition-colors border border-[#3A3A3A]"
@@ -104,7 +107,10 @@ export default async function AdminReportsPage() {
                           </button>
                         </form>
                         
-                        <form action={deleteTargetContent.bind(null, report.target_id, report.target_type)}>
+                        <form action={async () => {
+                          'use server';
+                          await deleteTargetContent(report.target_id, report.target_type);
+                        }}>
                           <button 
                             type="submit"
                             className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 rounded-lg text-sm font-medium transition-colors"
