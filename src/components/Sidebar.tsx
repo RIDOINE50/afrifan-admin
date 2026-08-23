@@ -15,6 +15,7 @@ import {
   Settings,
   ChevronsLeft,
   Crown,
+  Bell, // ✅ AJOUTÉ : Pour les Notifications
 } from "lucide-react"
 
 const mainMenu = [
@@ -22,11 +23,13 @@ const mainMenu = [
   { name: "Utilisateurs", icon: Users, href: "/admin/users" },
   { name: "Créateurs", icon: Clapperboard, href: "/admin/creators" },
   { name: "Contenu", icon: Image, href: "/admin/content" },
-  { name: "Signalements", icon: Flag, href: "/admin/reports" },
+  { name: "Signalements", icon: Flag, href: "/admin/reports" }, // ✅ Déjà présent, bien en vue
+  { name: "Notifications", icon: Bell, href: "/admin/notifications" }, // ✅ AJOUTÉ
 ]
 
 const paymentsMenu = [
-  { name: "Transactions", icon: Wallet, href: "/admin/transactions" },
+  { name: "Finances", icon: Wallet, href: "/admin/finance" }, // ✅ AJOUTÉ : Notre page de commissions
+  { name: "Transactions", icon: Banknote, href: "/admin/transactions" },
   { name: "Abonnements", icon: Gem, href: "/admin/subscriptions" },
   { name: "Retraits", icon: Banknote, href: "/admin/withdrawals" },
 ]
@@ -92,7 +95,7 @@ export default function Sidebar() {
         {bottomMenu.map(renderItem)}
 
         {/* Profil admin */}
-        <div className="flex items-center gap-3 mt-4 px-4 py-3 rounded-lg bg-white/5">
+        <div className="flex items-center gap-3 mt-4 px-4 py-3 rounded-lg bg-white/5 mx-3">
           <div className="w-9 h-9 rounded-full bg-violet-600 flex items-center justify-center text-white text-sm font-bold">
             A
           </div>
