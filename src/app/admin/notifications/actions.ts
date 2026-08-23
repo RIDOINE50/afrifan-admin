@@ -3,14 +3,15 @@
 import { supabaseAdmin } from '@/lib/supabase';
 import { revalidatePath } from 'next/cache';
 
-export async function sendCampaign(formData: FormData) {
+export async function sendCampaign(formData: FormData): Promise<void> {
   const title = formData.get('title') as string;
   const message = formData.get('message') as string;
   const targetType = formData.get('targetType') as string;
   const targetUserId = formData.get('targetUserId') as string;
 
   if (!title || !message || !targetType) {
-    return { error: 'Veuillez remplir tous les champs obligatoires.' };
+    console.error('Veuillez remplir tous les champs obligatoires.');
+    return;
   }
 
   try {
@@ -24,9 +25,7 @@ export async function sendCampaign(formData: FormData) {
     if (dbError) throw dbError;
 
     revalidatePath('/admin/notifications');
-    return { success: true };
   } catch (error) {
     console.error('Erreur envoi campagne:', error);
-    return { error: 'Une erreur est survenue.' };
   }
 }
