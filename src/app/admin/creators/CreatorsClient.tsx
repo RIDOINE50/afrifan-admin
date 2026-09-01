@@ -27,7 +27,6 @@ export default function CreatorsClient({ applications }: { applications: Applica
 
   // Ne garder que les demandes en attente
   const pendingApps = applications.filter(app => app.status === 'pending' || !app.status)
-
   const handleAction = async (action: "approve" | "reject") => {
     if (!selectedApp) return
     setIsProcessing(true)
