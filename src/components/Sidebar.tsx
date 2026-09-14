@@ -15,7 +15,9 @@ import {
   Settings,
   ChevronsLeft,
   Crown,
-  Bell, // ✅ AJOUTÉ : Pour les Notifications
+  Bell,
+  Package,       // ✅ AJOUTÉ : Pour les Produits
+  ShoppingBag,   // ✅ AJOUTÉ : Pour les Achats
 } from "lucide-react"
 
 const mainMenu = [
@@ -23,19 +25,19 @@ const mainMenu = [
   { name: "Utilisateurs", icon: Users, href: "/admin/users" },
   { name: "Créateurs", icon: Clapperboard, href: "/admin/creators" },
   { name: "Contenu", icon: Image, href: "/admin/content" },
-  { name: "Signalements", icon: Flag, href: "/admin/reports" }, // ✅ Déjà présent, bien en vue
-  { name: "Notifications", icon: Bell, href: "/admin/notifications" }, // ✅ AJOUTÉ
+  { name: "Produits", icon: Package, href: "/admin/produits" }, // ✅ AJOUTÉ
+  { name: "Signalements", icon: Flag, href: "/admin/reports" },
+  { name: "Notifications", icon: Bell, href: "/admin/notifications" },
 ]
 
 const paymentsMenu = [
-  { name: "Finances", icon: Wallet, href: "/admin/finance" }, // ✅ AJOUTÉ : Notre page de commissions
-  { name: "Transactions", icon: Banknote, href: "/admin/transactions" },
-  { name: "Abonnements", icon: Gem, href: "/admin/subscriptions" },
-  { name: "Retraits", icon: Banknote, href: "/admin/withdrawals" },
+  { name: "Finances", icon: Wallet, href: "/admin/finance" },
+  { name: "Mes Retraits", icon: Banknote, href: "/admin/mesretraits" }, // ✅ MODIFIÉ (était withdrawals)
+  { name: "Mes Achats", icon: ShoppingBag, href: "/admin/mesachats" },   // ✅ AJOUTÉ (remplace transactions)
 ]
 
 const bottomMenu = [
-  { name: "Statistiques", icon: BarChart3, href: "/admin/stats" },
+  { name: "Statistiques", icon: BarChart3, href: "/admin/statistique" }, // ✅ MODIFIÉ (était stats)
   { name: "Paramètres", icon: Settings, href: "/admin/settings" },
 ]
 

@@ -4,67 +4,29 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend
 } from "recharts"
-import { TrendingUp, TrendingDown, Users, Clapperboard, UserPlus, Activity } from "lucide-react"
+import { TrendingUp, Users, Clapperboard, UserPlus, Activity } from "lucide-react"
 import { Profile } from "@/lib/types"
+
+// Types mis à jour pour recevoir les données du serveur
+type RevenueDay = { name: string; revenus: number }
+type SubStatus = { name: string; value: number; color: string }
+
 type DashboardStats = {
   totalUsers: number
   verifiedCreators: number
   newSubscribers: number
   retentionRate: number
   recentUsers: Profile[]
+  revenueData: RevenueDay[]
+  subscriptionData: SubStatus[]
 }
 
 export default function DashboardClient({ stats }: { stats: DashboardStats }) {
   const cards = [
-    {
-      label: "Total Utilisateurs",
-      value: stats.totalUsers.toLocaleString(),
-      change: "+2%",
-      up: true,
-      icon: Users,
-      color: "bg-violet-600",
-    },
-    {
-      label: "Créateurs Vérifiés",
-      value: stats.verifiedCreators.toLocaleString(),
-      change: "+15%",
-      up: true,
-      icon: Clapperboard,
-      color: "bg-blue-600",
-    },
-    {
-      label: "Nouveaux Abonnés",
-      value: stats.newSubscribers.toString(),
-      change: "+2%",
-      up: true,
-      icon: UserPlus,
-      color: "bg-green-600",
-    },
-    {
-      label: "Taux de Rétention",
-      value: `${stats.retentionRate}%`,
-      change: "+5%",
-      up: true,
-      icon: Activity,
-      color: "bg-orange-600",
-    },
-  ]
-
-  const revenueData = [
-    { name: "Lun", revenus: 4000 },
-    { name: "Mar", revenus: 3000 },
-    { name: "Mer", revenus: 5000 },
-    { name: "Jeu", revenus: 4500 },
-    { name: "Ven", revenus: 6000 },
-    { name: "Sam", revenus: 5500 },
-    { name: "Dim", revenus: 7000 },
-  ]
-
-  const subscriptionData = [
-    { name: "Actifs", value: stats.newSubscribers || 100, color: "#8B5CF6" },
-    { name: "En essai", value: 10, color: "#F59E0B" },
-    { name: "Renouvelés", value: 25, color: "#10B981" },
-    { name: "Expirés", value: 4, color: "#3B82F6" },
+    { label: "Total Utilisateurs", value: stats.totalUsers.toLocaleString(), change: "Total", up: true, icon: Users, color: "bg-violet-600" },
+    { label: "Créateurs Vérifiés", value: stats.verifiedCreators.toLocaleString(), change: "Certifiés", up: true, icon: Clapperboard, color: "bg-blue-600" },
+    { label: "Nouveaux Abonnés", value: stats.newSubscribers.toString(), change: "30 derniers jours", up: true, icon: UserPlus, color: "bg-green-600" },
+    { label: "Taux de Rétention", value: `${stats.retentionRate}%`, change: "Abonnés actifs", up: stats.retentionRate > 50, icon: Activity, color: "bg-orange-600" },
   ]
 
   return (
@@ -86,7 +48,7 @@ export default function DashboardClient({ stats }: { stats: DashboardStats }) {
                   <Icon size={24} className="text-white" />
                 </div>
                 <div className={`flex items-center gap-1 text-sm ${stat.up ? "text-green-500" : "text-red-500"}`}>
-                  {stat.up ? <TrendingUp size={16} /> : <TrendingDown size={16} />}
+                  <TrendingUp size={16} />
                   <span className="font-medium">{stat.change}</span>
                 </div>
               </div>
@@ -99,10 +61,11 @@ export default function DashboardClient({ stats }: { stats: DashboardStats }) {
 
       {/* Graphiques */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        {/* Graphique des revenus (Dynamique) */}
         <div className="bg-[#1A1A1A] border border-white/10 rounded-xl p-6">
-          <h3 className="text-white font-semibold mb-6">Revenus de la semaine</h3>
+          <h3 className="text-white font-semibold mb-6">Revenus des 7 derniers jours</h3>
           <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={revenueData}>
+            <BarChart data={stats.revenueData}>
               <CartesianGrid strokeDasharray="3 3" stroke="#333" />
               <XAxis dataKey="name" stroke="#888" />
               <YAxis stroke="#888" />
@@ -112,12 +75,13 @@ export default function DashboardClient({ stats }: { stats: DashboardStats }) {
           </ResponsiveContainer>
         </div>
 
+        {/* Graphique des abonnements (Dynamique) */}
         <div className="bg-[#1A1A1A] border border-white/10 rounded-xl p-6">
-          <h3 className="text-white font-semibold mb-6">Répartition des abonnements</h3>
+          <h3 className="text-white font-semibold mb-6">État des abonnements</h3>
           <ResponsiveContainer width="100%" height={300}>
             <PieChart>
               <Pie
-                data={subscriptionData}
+                data={stats.subscriptionData}
                 cx="50%"
                 cy="50%"
                 innerRadius={80}
@@ -125,7 +89,7 @@ export default function DashboardClient({ stats }: { stats: DashboardStats }) {
                 paddingAngle={5}
                 dataKey="value"
               >
-                {subscriptionData.map((entry, index) => (
+                {stats.subscriptionData.map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={entry.color} />
                 ))}
               </Pie>
@@ -153,9 +117,7 @@ export default function DashboardClient({ stats }: { stats: DashboardStats }) {
           <tbody>
             {stats.recentUsers.length === 0 ? (
               <tr>
-                <td colSpan={4} className="text-center py-8 text-gray-500">
-                  Aucun utilisateur trouvé
-                </td>
+                <td colSpan={4} className="text-center py-8 text-gray-500">Aucun utilisateur trouvé</td>
               </tr>
             ) : (
               stats.recentUsers.map((user) => (

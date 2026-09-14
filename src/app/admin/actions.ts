@@ -3,6 +3,9 @@
 import { supabaseAdmin } from "@/lib/supabase"
 import { revalidatePath } from "next/cache"
 
+// ==========================================
+// 1. GESTION DES DEMANDES CRÉATEUR
+// ==========================================
 export async function updateCreatorApplication(
   applicationId: string, 
   userId: string, 
@@ -59,5 +62,64 @@ export async function updateCreatorApplication(
     const errorMessage = error instanceof Error ? error.message : "Une erreur inconnue est survenue"
     console.error("❌ Erreur updateCreatorApplication:", errorMessage)
     return { success: false, message: errorMessage }
+  }
+}
+
+// ==========================================
+// 2. GESTION DES UTILISATEURS (BAN / UNBAN)
+// ==========================================
+
+export async function banUserAction(userId: string) {
+  try {
+    // 1. On met is_banned à true (sans toucher au rôle user/créateur/admin)
+    const { error: profileError } = await supabaseAdmin
+      .from("profiles")
+      .update({ is_banned: true })
+      .eq("id", userId)
+
+    if (profileError) throw new Error(profileError.message)
+
+    // 2. Déconnexion globale (coupe la session mobile/web immédiatement)
+    try {
+      await supabaseAdmin.auth.admin.signOut(userId, { scope: 'global' })
+    } catch (signOutErr) {
+      console.warn("⚠️ Info: Déconnexion globale échouée, mais le profil est bien banni.", signOutErr)
     }
+
+    // 3. Rafraîchir la page admin
+    revalidatePath("/admin/users")
+    
+    return { 
+      success: true, 
+      message: "Utilisateur banni et déconnecté de tous ses appareils." 
+    }
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : "Une erreur inconnue est survenue"
+    console.error("❌ Erreur banUserAction:", errorMessage)
+    return { success: false, message: errorMessage }
+  }
+}
+
+export async function unbanUserAction(userId: string) {
+  try {
+    // On remet is_banned à false (le rôle reste intact, qu'il soit user ou creator)
+    const { error } = await supabaseAdmin
+      .from("profiles")
+      .update({ is_banned: false }) 
+      .eq("id", userId)
+
+    if (error) throw new Error(error.message)
+
+    // Rafraîchir la page admin
+    revalidatePath("/admin/users")
+    
+    return { 
+      success: true, 
+      message: "Utilisateur débanni avec succès." 
+    }
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : "Une erreur inconnue est survenue"
+    console.error("❌ Erreur unbanUserAction:", errorMessage)
+    return { success: false, message: errorMessage }
+  }
 }

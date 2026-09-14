@@ -1,5 +1,7 @@
 "use client"
 
+import { useState } from "react"
+import { useRouter } from "next/navigation"
 import Link from "next/link"
 import {
   ArrowLeft,
@@ -13,8 +15,10 @@ import {
   ShieldCheck,
   MessageSquare,
   Hash,
+  Loader2, // ✅ Ajouté pour le spinner de chargement
 } from "lucide-react"
 import { Profile, Post, AuthUserInfo } from "@/lib/types"
+import { banUserAction, unbanUserAction } from "@/app/admin/actions" // ✅ Import des actions
 
 type Props = {
   profile: Profile
@@ -29,12 +33,44 @@ type Props = {
 }
 
 export default function UserDetailClient({ profile, authUser, posts, stats }: Props) {
+  const router = useRouter()
+  const [isActionLoading, setIsActionLoading] = useState(false)
+
   const statCards = [
     { label: "Publications", value: stats.postsCount, icon: FileText, color: "text-violet-500" },
     { label: "Likes reçus", value: stats.totalLikes, icon: Heart, color: "text-red-500" },
     { label: "Abonnés", value: stats.followersCount, icon: Users, color: "text-blue-500" },
     { label: "Abonnements", value: stats.followingCount, icon: UserPlus, color: "text-green-500" },
   ]
+
+  // ✅ Fonction pour basculer le statut de bannissement
+  const handleToggleBan = async () => {
+    const isCurrentlyBanned = profile.is_banned === true
+    const actionText = isCurrentlyBanned ? "débannir" : "bannir"
+    
+    if (!window.confirm(`Êtes-vous sûr de vouloir ${actionText} cet utilisateur ?`)) {
+      return
+    }
+
+    setIsActionLoading(true)
+    try {
+      const result = isCurrentlyBanned 
+        ? await unbanUserAction(profile.id)
+        : await banUserAction(profile.id)
+
+      if (result.success) {
+        alert(result.message)
+        router.refresh() // ✅ Rafraîchit les données du serveur pour mettre à jour l'UI
+      } else {
+        alert("Erreur : " + result.message)
+      }
+    } catch (error) {
+      console.error("Erreur lors de l'action:", error)
+      alert("Une erreur inattendue est survenue.")
+    } finally {
+      setIsActionLoading(false)
+    }
+  }
 
   return (
     <div className="p-8">
@@ -69,11 +105,18 @@ export default function UserDetailClient({ profile, authUser, posts, stats }: Pr
             <p className="text-gray-500 mb-3">@{profile.username || "—"}</p>
             <div className="flex flex-wrap gap-2">
               <span className="px-3 py-1 rounded-full bg-violet-600/10 text-violet-500 text-xs font-medium">
-                {profile.role || "user"}
+                {profile.role === "creator" ? "Créateur" : profile.role === "admin" ? "Admin" : "Utilisateur"}
               </span>
-              <span className="px-3 py-1 rounded-full bg-green-500/10 text-green-500 text-xs font-medium">
-                Actif
+              
+              {/* ✅ Badge de statut dynamique basé sur is_banned */}
+              <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                profile.is_banned === true 
+                  ? "bg-red-500/10 text-red-500" 
+                  : "bg-green-500/10 text-green-500"
+              }`}>
+                {profile.is_banned === true ? "Banni" : "Actif"}
               </span>
+
               {profile.is_verified && (
                 <span className="px-3 py-1 rounded-full bg-blue-500/10 text-blue-500 text-xs font-medium inline-flex items-center gap-1">
                   <ShieldCheck size={12} /> Vérifié
@@ -82,8 +125,24 @@ export default function UserDetailClient({ profile, authUser, posts, stats }: Pr
             </div>
           </div>
 
-          <button className="px-4 py-2 rounded-lg bg-red-600/20 text-red-500 hover:bg-red-600/30 text-sm font-medium inline-flex items-center gap-2">
-            <Ban size={16} /> Bannir
+          {/* ✅ Bouton Bannir / Débannir fonctionnel */}
+          <button 
+            onClick={handleToggleBan}
+            disabled={isActionLoading}
+            className={`px-4 py-2 rounded-lg text-sm font-medium inline-flex items-center gap-2 transition disabled:opacity-50 disabled:cursor-not-allowed ${
+              profile.is_banned === true
+                ? "bg-green-600/20 text-green-500 hover:bg-green-600/30"
+                : "bg-red-600/20 text-red-500 hover:bg-red-600/30"
+            }`}
+          >
+            {isActionLoading ? (
+              <Loader2 size={16} className="animate-spin" />
+            ) : profile.is_banned === true ? (
+              <ShieldCheck size={16} />
+            ) : (
+              <Ban size={16} />
+            )}
+            {isActionLoading ? "Traitement..." : profile.is_banned === true ? "Débannir" : "Bannir"}
           </button>
         </div>
       </div>
@@ -123,7 +182,7 @@ export default function UserDetailClient({ profile, authUser, posts, stats }: Pr
               <div>
                 <p className="text-gray-500 text-xs">Inscrit le</p>
                 <p className="text-white text-sm">
-                  {new Date(profile.created_at).toLocaleDateString("fr-FR")}
+                  {profile.created_at ? new Date(profile.created_at).toLocaleDateString("fr-FR") : "Date inconnue"}
                 </p>
               </div>
             </div>
