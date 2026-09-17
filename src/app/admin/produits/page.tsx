@@ -67,8 +67,14 @@ export default async function ProduitsPage() {
       const sales_count = purchases?.length || 0
       const total_revenue = purchases?.reduce((sum, p) => sum + Number(p.amount_paid), 0) || 0
 
+      // ✅ CORRECTION TYPE : Supabase renvoie 'creator' en tableau, on déballe [0]
+      const creator = Array.isArray(product.creator)
+        ? product.creator[0] ?? null
+        : product.creator ?? null
+
       return {
         ...product,
+        creator,
         sales_count,
         total_revenue
       }

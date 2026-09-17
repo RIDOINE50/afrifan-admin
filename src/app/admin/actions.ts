@@ -81,7 +81,7 @@ export async function banUserAction(userId: string) {
 
     // 2. Déconnexion globale (coupe la session mobile/web immédiatement)
     try {
-      await supabaseAdmin.auth.admin.signOut(userId, { scope: 'global' })
+      await supabaseAdmin.auth.admin.signOut(userId, 'global')
     } catch (signOutErr) {
       console.warn("⚠️ Info: Déconnexion globale échouée, mais le profil est bien banni.", signOutErr)
     }

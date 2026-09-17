@@ -35,5 +35,13 @@ export default async function MesAchatsPage() {
     )
   }
 
-  return <PurchasesListClient purchases={purchases} />
+  // ✅ CORRECTION TYPE : Supabase renvoie les relations en tableau, on déballe [0]
+  const formattedPurchases = purchases.map((p: any) => ({
+    ...p,
+    buyer: Array.isArray(p.buyer) ? p.buyer[0] : p.buyer,
+    creator: Array.isArray(p.creator) ? p.creator[0] : p.creator,
+    product: Array.isArray(p.product) ? p.product[0] : p.product,
+  }))
+
+  return <PurchasesListClient purchases={formattedPurchases} />
 }

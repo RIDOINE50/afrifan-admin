@@ -20,8 +20,11 @@ import {
 import { Profile, Post, AuthUserInfo } from "@/lib/types"
 import { banUserAction, unbanUserAction } from "@/app/admin/actions" // ✅ Import des actions
 
+// ✅ Type étendu pour inclure is_banned sans toucher à lib/types
+type ProfileWithBan = Profile & { is_banned?: boolean }
+
 type Props = {
-  profile: Profile
+  profile: ProfileWithBan
   authUser: AuthUserInfo | null
   posts: Post[]
   stats: {

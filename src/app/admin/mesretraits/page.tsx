@@ -66,7 +66,14 @@ export default function MesRetraitsPage() {
       const { data, error } = await query
 
       if (error) throw error
-      setWithdrawals(data || [])
+
+      // ✅ CORRECTION TYPE : Supabase renvoie 'profiles' en tableau, on déballe [0]
+      const formatted: Withdrawal[] = (data || []).map((w: any) => ({
+        ...w,
+        profiles: Array.isArray(w.profiles) ? w.profiles[0] ?? null : w.profiles ?? null,
+      }))
+
+      setWithdrawals(formatted)
     } catch (error) {
       console.error("❌ Erreur chargement historique retraits:", error)
     } finally {

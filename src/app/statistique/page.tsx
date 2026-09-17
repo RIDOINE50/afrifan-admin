@@ -112,15 +112,32 @@ async function getStats(period: Period) {
   const totalReports = reportsResult.count || 0
   const totalNotifications = notificationsResult.count || 0
   
-  const productRevenue = purchasesResult.data?.reduce((sum, p) => sum + Number(p.amount_paid), 0) || 0
+  // ✅ CORRECTION TYPE : typage explicite des paramètres des reduce
+  const productRevenue = purchasesResult.data?.reduce(
+    (sum: number, p: { amount_paid: number | string }) => sum + Number(p.amount_paid),
+    0
+  ) || 0
   const totalPurchases = purchasesResult.data?.length || 0
   
-  const tipRevenue = tipsResult.data?.reduce((sum, t) => sum + Number(t.amount), 0) || 0
-  const subscriptionRevenue = subscriptionsResult.data?.reduce((sum, s) => sum + Number(s.amount_paid), 0) || 0
+  const tipRevenue = tipsResult.data?.reduce(
+    (sum: number, t: { amount: number | string }) => sum + Number(t.amount),
+    0
+  ) || 0
+  const subscriptionRevenue = subscriptionsResult.data?.reduce(
+    (sum: number, s: { amount_paid: number | string }) => sum + Number(s.amount_paid),
+    0
+  ) || 0
   
-  const totalWithdrawals = withdrawalsResult.data?.reduce((sum, w) => sum + Number(w.amount), 0) || 0
-  const pendingWithdrawals = withdrawalsResult.data?.filter(w => w.status === "pending").length || 0
-  const completedWithdrawals = withdrawalsResult.data?.filter(w => w.status === "completed").length || 0
+  const totalWithdrawals = withdrawalsResult.data?.reduce(
+    (sum: number, w: { amount: number | string }) => sum + Number(w.amount),
+    0
+  ) || 0
+  const pendingWithdrawals = withdrawalsResult.data?.filter(
+    (w: { status: string }) => w.status === "pending"
+  ).length || 0
+  const completedWithdrawals = withdrawalsResult.data?.filter(
+    (w: { status: string }) => w.status === "completed"
+  ).length || 0
 
   return {
     period,

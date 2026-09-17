@@ -6,12 +6,15 @@ import { Profile } from "@/lib/types"
 import Link from "next/link"
 import { banUserAction, unbanUserAction } from "@/app/admin/actions"
 
-export default function UsersClient({ profiles }: { profiles: Profile[] }) {
+// ✅ Type étendu pour inclure is_banned sans toucher à lib/types
+type ProfileWithBan = Profile & { is_banned?: boolean }
+
+export default function UsersClient({ profiles }: { profiles: ProfileWithBan[] }) {
   const [search, setSearch] = useState("")
   const [filter, setFilter] = useState<"all" | "users" | "creators" | "banned">("all")
   
   // ✅ États pour gérer l'interface dynamiquement sans recharger la page
-  const [localProfiles, setLocalProfiles] = useState<Profile[]>(profiles)
+  const [localProfiles, setLocalProfiles] = useState<ProfileWithBan[]>(profiles)
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null)
 
   // ✅ FILTRAGE CORRIGÉ : On utilise is_banned, pas le rôle
@@ -45,7 +48,7 @@ export default function UsersClient({ profiles }: { profiles: Profile[] }) {
   }
 
   // ✅ Fonction pour Bannir un utilisateur
-  const handleBan = async (profile: Profile) => {
+  const handleBan = async (profile: ProfileWithBan) => {
     if (!window.confirm(`Êtes-vous sûr de vouloir bannir ${profile.full_name || profile.username} ?\nIl sera déconnecté et ne pourra plus se connecter.`)) return
 
     setActionLoadingId(profile.id)
@@ -64,7 +67,7 @@ export default function UsersClient({ profiles }: { profiles: Profile[] }) {
   }
 
   // ✅ Fonction pour Débannir un utilisateur
-  const handleUnban = async (profile: Profile) => {
+  const handleUnban = async (profile: ProfileWithBan) => {
     if (!window.confirm(`Voulez-vous vraiment débannir ${profile.full_name || profile.username} ?`)) return
 
     setActionLoadingId(profile.id)
